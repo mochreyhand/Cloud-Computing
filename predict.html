@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mental Health Web App</title>
+    <title>Prediction - Mental Health Web App</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -68,6 +68,22 @@
             padding: 20px;
         }
 
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
         .btn-primary {
             display: inline-block;
             text-decoration: none;
@@ -77,16 +93,25 @@
             border-radius: 5px;
             text-align: center;
             transition: background-color 0.3s;
+            cursor: pointer;
         }
 
         .btn-primary:hover {
             background-color: #03dac5;
         }
+
+        .result {
+            margin-top: 20px;
+        }
+
+        canvas {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     <header>
-        <h1>Mental Health Trends Dashboard</h1>
+        <h1>Mental Health Trends Prediction</h1>
         <nav>
             <ul>
                 <li><a href="home.html">Home</a></li>
@@ -97,14 +122,87 @@
 
     <main>
         <div class="container">
-            <h2>Welcome!</h2>
-            <p>This application helps analyze, predict, and visualize mental health trends in West Java. It leverages modern web technologies and data analytics to provide insights and projections for 2025-2030.</p>
-            <p><a href="register.html" class="btn-primary">Get Started</a></p>
+            <h2>Make a Prediction</h2>
+            <form id="predictionForm">
+                <label for="population">Population:</label>
+                <input type="number" id="population" name="population" required>
+
+                <label for="ur">Unemployment Rate (%):</label>
+                <input type="number" step="0.01" id="ur" name="ur" required>
+
+                <label for="pr">Poverty Rate (%):</label>
+                <input type="number" step="0.01" id="pr" name="pr" required>
+
+                <button type="submit" class="btn-primary">Predict</button>
+            </form>
+
+            <div class="result" id="result">
+                <!-- Prediction results will appear here -->
+            </div>
+
+            <canvas id="trendChart" width="400" height="200"></canvas>
         </div>
     </main>
 
     <footer>
-        <p>&copy; Group 05 - 2024 Adhi Wibowo Foundation</p>
+        <p>&copy; 2024 Adhi Wibowo Foundation</p>
     </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const form = document.getElementById("predictionForm");
+        const resultDiv = document.getElementById("result");
+        const ctx = document.getElementById("trendChart").getContext("2d");
+
+        const chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [{
+                    label: "Prediction Trends",
+                    data: [],
+                    borderColor: "#6200ea",
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { title: { display: true, text: "Year" } },
+                    y: { title: { display: true, text: "Values" } }
+                }
+            }
+        });
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const population = parseFloat(document.getElementById("population").value);
+            const ur = parseFloat(document.getElementById("ur").value);
+            const pr = parseFloat(document.getElementById("pr").value);
+
+            const response = await fetch("/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ population, ur, pr })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <p><strong>MD:</strong> ${data.md}</p>
+                    <p><strong>PMD:</strong> ${data.pmd}</p>
+                    <p><strong>MDT:</strong> ${data.mdt}</p>
+                `;
+
+                chart.data.labels = data.trends.map(t => t.year);
+                chart.data.datasets[0].data = data.trends.map(t => t.value);
+                chart.update();
+            } else {
+                resultDiv.innerHTML = `<p>Error fetching prediction.</p>`;
+            }
+        });
+    </script>
 </body>
 </html>
